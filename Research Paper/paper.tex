@@ -28,65 +28,73 @@
 % an abbreviated paper title here
 %
 \author{
-*YET TO BE PUBLISHED \inst{*} \\Snehal Reddy Koukuntla\inst{*}, Manjunath Bhat\inst{*} and Shamin Aggarwal \inst{*} }
+ \\ Rajat Kumar Jenamani\inst{*}, Snehal Reddy Koukuntla\inst{*}, Manjunath Bhat\inst{*}, Shamin Aggarwal \inst{*} and Jayanta Mukhopadhyay }
 %
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
 \institute{Indian Institute of Technology Kharagpur, India\\
-\email{ksnehalreddy@iitkgp.ac.in, manjunathbhat9920@iitkgp.ac.in, shamin1998@iitkgp.ac.in}}
+\email{rkj@iitkgp.ac.in, ksnehalreddy@iitkgp.ac.in, manjunathbhat9920@iitkgp.ac.in, shamin1998@iitkgp.ac.in, jay@cse.iitkgp.ac.in}}
 %
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-Randomised sampling based algorithms such as RRT and RRT* have a widespread use in path planning, but they tend to take considerable amount of time and space to converge towards the destination. RRT* with artificial potential field (RRT*-APF) is a novel solution to pilot the RRT* sampling towards the destination and away from the obstacles, thus leading to to faster convergence. But finding the potential function for each image is a gruelling task. In this paper we propose a machine learning based approach to tune the sensitive parameters of the RRT*-APF algorithm, which have a substantial effect on both rate of convergence and path length. 
+Randomised sampling based algorithms such as RRT and RRT* have widespread use in path planning, but they tend to take a considerable amount of time and space to converge towards the destination. RRT* with artificial potential field (RRT*-APF) is a novel solution to pilot the RRT* sampling towards the destination and away from the obstacles, thus leading to faster convergence. But the ideal potential function varies from image to image and different sections within the image as well, and finding the potential function for each section of each image is a grueling task. In this paper, we divide the image into multiple regions and propose a deep learning based approach to tune the sensitive parameters which act as a heuristic and pilots the tree towards the destination, which has a substantial effect on both the rate of convergence and path length.
 
 \keywords{Path planning, Machine Learning, Robotics, RRT, Potential energy}
 \end{abstract}
 %
 %
 %
-\section{\centering{Introduction}}
-Current automated bots require the rapid motion of robots in a highly dynamic environment where agents try to excel in their task with superior planning and strategy. To achieve the above goals we need to design path planning algorithms that generate paths that are short in minimal amount of computational time and space. Traditional graph algorithms like Dijkstra and A* give the shortest path, but are very heavy in terms of computational load and hence cannot be used in the field of robotics which demands instantaneous results. On the other hand random sampling algorithms like Rapidly Exploring Random Trees (RRT) give stretched out paths and hence are not very feasible. RRT* solves this problem partially but brings the problem of slow rate of convergence towards the goal. 
+\section{{Introduction}}
+Mobile automated bots require rapid motion in a highly dynamic environment where agents try to excel in their task with superior path planning and strategy. To achieve the former we need to design path planning algorithms that generate paths that are sufficiently short, and in minimal amount of computational time and space. Traditional graph algorithms like Dijkstra and A* give the shortest path, but are computationally heavy and hence cannot be used in the fields of robotics which demand instantaneous results. On the other hand random sampling algorithms like Rapidly Exploring Random Trees (RRT) give stretched out, unoptimized paths and hence are not very feasible. RRT* solves this problem partially, but generally reduces the rate of convergence towards the goal. 
 
-Artificial Potential Field(APF) is an interesting and intuitive concept that solves the above problems, by biasing the random sampling towards the destination and away from the obstacles by inducing artificial fields. But traditional APF requires us to go over the wearying task of manually setting the extremely sensitive potential functions. Small changes in the potential functions can result in considerable change in both length of path generated and the rate of convergence and may also lead to the tree getting stuck in local minimum hence leading to infinite convergence time. 
+Artificial Potential Field (APF) is an interesting and intuitive concept that solves the above problems, by biasing the random sampling towards the destination and away from the obstacles by inducing artificial 'potential' fields. But traditional APF requires us to go over the wearying task of manually adjusting the extremely sensitive potential functions. Small changes in the potential functions can result in considerable change in both length of path generated and the rate of convergence and may also lead to the tree getting stuck in local minimums hence leading to infinite convergence time. 
 
-The rest of the paper is organised as follows . Section 2  presents several extensions made to RRT .Section 3 formally explains our algorithm. Section 4 talks about the effectiveness of our algorithm in comparison to other path- planning algorithms. Section 5 briefs about the further modifications which can be done to our model to improve it.
+The rest of the paper is organized as follows . Section 2  presents several extensions made to RRT. Section 3 formally explains the problem formulation. Section 4 contains an in-depth description of our algorithm. Section 5 talks about the effectiveness of our algorithm in comparison to other path-planning algorithms. Section 6 briefs about the further modifications which can be done to our model to improve it.
 \vspace{-2mm}  
-\section{\centering{Background}}
+\section{{Related Work}}
 
 \subsection{Rapidly-exploring Random Tree}
-Here is a brief description of the method for a general configuration space, ${\cal C}$ (this can be considered as a general state space that might include position and velocity information). An RRT that is rooted at a configuration $q_{init}$ and has $K$ vertices is constructed using the following pseudo-code. 
-Step 4 chooses a random configuration, $q_{rand}$, in ${\cal C}$. Alternatively, one could replace $rand\_conf$ with $rand\_free\_conf$, and sample configurations in ${\cal C}_{free}$ (by using a collision detection algorithm to reject samples in ${\cal C}_{obs}$).
-
-It is assumed that a metric $\rho$ has been defined over ${\cal C}$. Step 5 selects the vertex, $q_{near}$, in the RRT, $G$, that is closest to $q_{rand}$
-
-In Step 6 of $BUILD\_RRT$, $new\_conf$ selects a new configuration, $q_{new}$, by moving from $q_{near}$ an incremental distance, $\Delta q$, in the direction of $q_{rand}$. This assumes that motion in any direction is possible. If differential constraints exist, then inputs are applied to the corresponding control system, and new configurations are obtained by numerical integration. Finally, a new vertex, $q_{new}$ and a new edge is added from $q_{near}$ to $q_{new}$.
+Here is a brief description of the algorithm, for a general configuration space, ${\cal C}$ (this can be considered as a general state space that might include position and velocity information). An RRT that is rooted at a configuration $q_{init}$ and has $N$ vertices is constructed using the following pseudo-code. 
+Step 4 chooses a random configuration, $q_{rand}$, in ${\cal C}$.
 
 
 \begin{algorithm}
 \caption{RRT algorithm}\label{RRT}
 \begin{algorithmic}[1]
-\Procedure{Build\_RRT}{$q_{init}$, $K$, $\Delta q$ }
+\Procedure{Build\_RRT}{$q_{init}$, $N$, $\Delta q$ }
 \State $G.init(q_{init})$
-\For{$ k = 1, 2, ..., K \do $}
+\For{$ i = 1, 2, ..., N \do $}
 \State $q_{rand}\gets rand\_conf();$
 \State $q_{near}\gets nearest\_vertex(q_{rand}, G);$
 \State $q_{new}\gets new\_conf(q_{near}, \Delta q);$
+\If{$Obstaclefree(q_{near},q_{new})$}
 \State $G.add\_vertex(q_{new});$
 \State $G.add\_edge(q_{near},q_{new});$
+\EndIf
 \EndFor
 \State \textbf{return} $G$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
+Step 2 initializes a RRT, $G$, with the configuration $q_{init}$. $G$ is a graph with the configurations $G.V$ as the set of vertices and $G.E$ as the set of edges.
+Alternatively, one could replace $rand\_conf$ with $rand\_free\_conf$, and sample configurations in ${\cal C}_{free}$ (by using a collision detection algorithm to reject samples in ${\cal C}_{obs}$).
+
+It is assumed that a metric $\rho$ has been defined over ${\cal C}$. Step 5 selects the vertex, $q_{near}$, in $G$, that is closest to $q_{rand}$.
+
+In Step 6 of $BUILD\_RRT$, $new\_conf$ selects a new configuration, $q_{new}$, by moving from $q_{near}$ an incremental distance, $\Delta q$, in the direction of $q_{rand}$. This assumes that motion in any direction is possible. If differential constraints exist, then inputs are applied to the corresponding control system, and new configurations are obtained by numerical integration. Finally, a new vertex, $q_{new}$ and a new edge, between $q_{near}$ and $q_{new}$, are added to G.
+
+
+
+
 \begin{algorithm}
 \caption{NEAREST\_VERTEX}\label{RRT}
 \begin{algorithmic}[1]
 \Procedure{nearest\_vertex}{$q, G$}
 \State $d\gets \infty;$
-\For{$v \in V \do$}
+\For{$v \in G.V \do$}
 \If{$\rho(q,v) \leq d$}
 \State $v_{new} = v;$
 \State $d = \rho(q,v);$
@@ -99,7 +107,7 @@ In Step 6 of $BUILD\_RRT$, $new\_conf$ selects a new configuration, $q_{new}$, b
 
 \vspace{100mm}  
 \subsection{RRT*}
--RRT*\cite{IJACSA} inherits all the properties of RRT and works similar to  RRT.  However,  it  introduced  two  promising  features called near  neighbor  search  and rewiring  tree operations.  Near  neighbor  operations finds  the  best  parent  node  for the new node before its insertion in tree. This process is performed within the area of a ball of radius defined by :
+RRT*\cite{IJACSA} inherits all the properties of RRT and works similar to  RRT.  However,  it  introduced  two  promising  features called near  neighbor  search  and rewiring  tree operations.  Near  neighbor  operations finds  the  best  parent  node  for the new node before its insertion in the tree. This process is performed within the area of a ball of radius defined by :
 
 \vspace{3mm}
 
@@ -107,164 +115,231 @@ $k = \gamma (\frac{log(n)}{n})^{ \frac{1}{d} } $
 
 \vspace{3mm}
 
-\hspace{-6mm}where d is the search space dimension and γ is the planning constant    based    on    environment. Rewiring operation rebuilds the tree within this radius of area k to maintain the tree with minimal cost between tree connections. 
+\hspace{-6mm}where d is the search space dimension and γ is the planning constant    based    on    environment. Rewiring operation rebuilds the tree within this area of radius k to maintain the sub-tree with minimal cost between tree connections. 
+
+% \begin{algorithm}
+% \caption{RRT*}\label{RRT*}
+% \begin{algorithmic}[1]
+% \Procedure{rrt\_star}{$T(v,e), Z_{init}$}
+% \State $T\gets InsertNode(\phi,Z_{init},T);$
+% \For{$i = 1, 2, ..., N \do $}
+% \State $Z_{rand}\gets Sample(i);$
+% \State $Z_{nearest}\gets Nearest(T,Z_{rand});$
+% \State $(Z_{nearest},U_{new} )\gets Steer(Z_{nearest},Z_{rand});$
+% \If{$Obstaclefree(Z_{new})$}
+% \State $Z_{near}\gets Near(T,Z_{new},V);$
+% \State $Z_{min}\gets Chooseparent(Z_{near},Z_{nearest},Z_{new});$
+% \State $T\gets InsertNode(Z_{min},Z_{new},T);$
+% \State $T\gets Rewire(T,Z_{near},Z_{min},Z_{new});$
+% \EndIf
+% \EndFor
+% \State\textbf{return} $T$
+% \EndProcedure
+% \end{algorithmic}
+% \end{algorithm}
 
 \begin{algorithm}
-\caption{RRT*}\label{RRT*}
+\caption{RRT* algorithm}\label{RRT*}
 \begin{algorithmic}[1]
-\Procedure{rrt\_star}{$T(v,e), Z_{init}$}
-\State $T\gets InsertNode(\phi,Z_{init},T);$
-\For{$i = 1, 2, ..., N \do $}
-\State $Z_{rand}\gets Sample(i);$
-\State $Z_{nearest}\gets Nearest(T,Z_{rand});$
-\State $(Z_{nearest},U_{new} )\gets Steer(Z_{nearest},Z_{rand});$
-\If{$Obstaclefree(Z_{new})$}
-\State $Z_{near}\gets Near(T,Z_{new},V);$
-\State $Z_{min}\gets Chooseparent(Z_{near},Z_{nearest},Z_{new});$
-\State $T\gets InsertNode(Z_{min},Z_{new},T);$
-\State $T\gets Rewire(T,Z_{near},Z_{min},Z_{new});$
+\Procedure{Build\_RRT*}{$q_{init}$, $N$, $\Delta q$, $k$}
+\State $G.init(q_{init})$
+\For{$ i = 1, 2, ..., N \do $}
+\State $q_{rand}\gets rand\_conf();$
+\State $q_{near}\gets nearest\_vertex(q_{rand}, G);$
+\State $q_{new}\gets new\_conf(q_{near}, \Delta q);$
+\State $q_{min}\gets ChooseParent(q_{new},k);$
+\If{$Obstaclefree(q_{min},q_{new})$}
+\State $G.add\_vertex(q_{new});$
+\State $G.add\_edge(q_{min},q_{new});$
+\State $G\gets Rewire(q_{new},k);$
 \EndIf
 \EndFor
-\State\textbf{return} $T$
+\State \textbf{return} $G$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
   
 \subsection{RT-RRT*}
 RT-RRT*\cite{RT-RRT*} initializes the tree
-with $x_a$ as its root. At each iteration, it expands and rewires the tree for a limited user-defined time (lines 5-6).  Then it plans a path from the current tree root for a limited user-defined amount of steps further . The planned path is a set of nodes starting from the tree root,($x_0$,$x_1$,...,$x_k$).  At each iteration it moves the agent for a limited time to keep it close to the tree root,$x_0$.  When path planning is done and the agent is at the tree root, it changes the tree root to the next immediate node after $x_0$ in the planned path,$x_1$.  Hence, the agent to moves on the planned path on the tree towards the goal.
+with $x_0$ as its root. At each iteration, it expands and rewires the tree for a limited user-defined time (lines 5-6).  Then it plans a path from the current tree root for a limited user-defined amount of steps further . The planned path is a set of nodes starting from the tree root,($x_0$,$x_1$,...,$x_k$).  At each iteration it moves the agent for a limited time to keep it close to the tree root, $x_0$.  When path planning is done and the agent is at the tree root, it changes the tree root to the next immediate node after $x_0$ in the planned path, $x_1$.  Hence, the agent moves on the planned path through the tree, towards the goal.
 
 
 % \section{RRT}
 % Rapidly-exploring Random Trees (RRT) algorithm grows a tree rooted at the source node. Random points are sampled which are added to the tree until the goal is reached. It is a simple and fast algorithm but has certain limitations. It does not guarantee convergence
 % to an optimal path solution. 
 
-\vspace{-5mm}
+% \vspace{-15mm}
 \subsection{Potential piloted-RRT*}
-Potential guided directional-RRT*(PDG-RRT*)\cite{potential}Potential Based Path Planning methods treat the environment as a potential field such that the goal point attracts and the obstacles
-repulse the agent. These methods stem from the original Artificial
-Potential Field (APF) introduced in \cite{potential}.  A lot of research has been done on this algorithm to improve its convergence rate.
+Potential Based Path Planning methods treat the environment as a potential field such that the goal point attracts and the obstacles repulse the agent. These methods stem from the original Artificial Potential Field (APF) guided directional-RRT* introduced in \cite{potential}. The relative attraction of the tree towards the goal in comparison to the repulsion away from the obstacles is an important parameter that determines the quality of the path generated both in terms of time of convergence and the width of the tree. This effect is explained in section 4.2.
 
 \begin{algorithm}
 \caption{Potential Guided Directional-RRT* algorithm}\label{alg:PG-RRT}
 \begin{algorithmic}[1]
-\Procedure{Potential Guided Directional-RRT*}{$x_{init}$}
-\State $V\gets \{x_{init}\}$
-\State $E\gets \phi$
-\For{$ i = 1, 2, 3$ . . . $nodes_{max}$ \do }
-\State $x_{rand}\gets SampleFree(i)$
-\State $x_{prand}\gets GradientDescent(x_{rand})$
-\State $x_{nearest}\gets Nearest(V, x_{prand})$
-\State $x_{node}\gets Steer(x_{nearest}, x_{prand})$
-\If{ObstacleFree($x_{nearest}$, $x_{node}$)}
-\State $V\gets V \cup \{x_{node}\}$ 
-\State $E\gets E \cup \{(x_{nearest}, x_{new})\}$
+\Procedure{PGD-RRT*}{$q_{init}$, $N$, $\Delta q$, $k$}
+\State $G.init(q_{init})$
+\For{$ i = 1, 2, ..., N \do $}
+\State $q_{rand}\gets rand\_conf();$
+\State $q_{rand}\gets GradientDescent(q_{rand});$
+\State $q_{near}\gets nearest\_vertex(q_{rand}, G);$
+\State $q_{new}\gets new\_conf(q_{near}, \Delta q);$
+\State $q_{min}\gets ChooseParent(q_{new},k);$
+\If{$Obstaclefree(q_{min},q_{new})$}
+\State $G.add\_vertex(q_{new});$
+\State $G.add\_edge(q_{min},q_{new});$
+\State $G\gets Rewire(q_{new},k);$
 \EndIf
 \EndFor
-\State \textbf{return} $G = (V,E )$
+\State \textbf{return} $G$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
 % \vspace{-10mm}
 % \section{Problem statement and motivation}
 
-\section{\centering{Algorithm}}
+
+\section{{Problem Formulation}}
 \vspace{-1mm}
-The previous works describe various ways in which the RRTs have been modified to improve the optimality, speed and dynamism of path generation. The potential piloted RRT* promises more optimal paths,but is not feasible as the potential parameters have different values at different parts if the field. These parameters are also very sensitive and the change in them can lead to drastic changes in the path.
+
+The overall goal is to learn a policy that predicts high quality feasible paths in terms of lesser tree branch-out, length of path and convergence time. Our model seeks to achieve this by optimizing the potential field guiding the random sampling. Let $X$ denote a 2 dimensional configuration space. Let
+$X_{obs}$ be the portion in collision and $X_{free}$ = $X$ \textbackslash $X_{obs}$ denote
+the free space. Let a path {$\xi$} : [0, 1] {$\rightarrow$} $X$ be a continuous mapping from index to configurations. A path {$\xi$} is said to be collision free if {$\xi$}({$\tau$} ) $\epsilon$ $X_{free}$ for all {$\tau$} $\epsilon$ [0, 1]. Let c($\xi$) be a cost function that maps $\xi$ to bounded non negative cost [0, $c_{max}$]. The problem statement requires us to find a feasible path possible in minimum time and then converge upon the feasible path with minimum cost . We do this by diving the field into grids of predefined size and then predicting the ideal parameters of the potential-piloted planning algorithm at the centre of these grids using machine learning. Thereafter, any random point generated in the configuration space uses the predicted parameters of the nearest grid centre for the potential-piloted planning algorithm. 
+
+\section{{Algorithm}}
+\vspace{-1mm}
+
+The previous works describe various ways in which the RRTs have been modified to improve the optimality, speed and dynamism of path generation. The potential piloted RRT* promises more optimal paths, but is not feasible as the potential parameters have different values at different parts of the field and parameters determining the relative attraction towards goal and repulsion away from obstacles vary from field to field and have to be tuned laboriously for each field. 
+
+To overcome this, the image is divided into a number of grids and a learning based algorithm is proposed, which automates the tuning process and finds the ideal parameters for each grid using the trained model quickly.
+
+\subsection{Field Area:}
+
+For testing and running this algorithm, we modelled our configuration space, $X$, on the field of the RoboCup Small Sized League. Here the bots are considered as obstacles, $X_{obs}$, and  the rest of the field as free space, $X_{free}$. A popular defending tactic used by teams in RoboCup SSL is considered, in which two bots tend to stay together in the D-Box to prevent direct shots towards the goal, one bot covers the opponent bot nearest to goal and meanwhile the other two bots stay near the halfline. Thus, the test field consists of three bots on the edge of the D-Box and two bots on the half-line as shown in Fig 1. The goal point is set to the centre of the goal line, which usually is the case in RoboCup SSL, while the start point is random.
+
 
 \begin{figure}
 \begin{center}
-\includegraphics[scale=0.8]{img9.jpg}}
+\includegraphics[scale=0.8]{img9.jpg}
     \caption{The field we considered for testing the algorithm} \label{fig1}
 \end{center}
 \end{figure}
 
-\begin{figure}
-\begin{center}
-\includegraphics[scale=0.8]{images2_tog_new2.png}
-    \caption{(a) The graph of superimposition of potential and frequency. (b) Straight line path is taken as cost in other planners marked in grey; actual path taken by our planner marked in black. The black patches mark infinity.} \label{fig1}
-\end{center}
-\end{figure}
-
-\subsection{Field Area:}
-For testing and running this algorithm, we considered our obstacles and path area similar to that of Small Sized League, RoboCup, where the bots were considered as obstacles and rest of the field was our path area. We considered three opponent bots to be guarding the goal in the opponent D-box and two other bots near the half-field line.
-
-\subsection{Potential field:}
-Electrostatic field is a very  coarse-grained approximation of the potential field generated in the field. It is clearly evident that the destination should made to act like a positive charge and attract the tree to grow towards it. But since the obstacles should be avoided and hence they should be made to act like negative charges and repel the tree. At every point $x$ in the space, the potential is calculated for a particular charge as $\text{V_{i}}=\frac{\text{kQ_{i}}}{\text{r_{i}}}$ where $Q_{i}$ is the magnitude of the $i^{th}$ point charge (obstacle ), and $r_{i}$ is the distance of the point $x$ from it. The net potential at a point is given by :
-
+\subsection{Potential field constants:}
+Electrostatic field is a very  coarse-grained approximation of the potential field we're considering. Considering the sampled nodes to be carrying a negative charge, it is clearly evident that the destination should be made to act like a positive charge to attract the tree to grow towards it. But since the obstacles should be avoided, they should be made to act like negative charges and repel the tree. Let $x_{obs} \epsilon X_{obs}$ be an obstacle node, carrying 'charge' $Q_{x_{obs}}$. Thus, at every point $x_{free} \epsilon X_{free}$, the potential due to $x_{obs}$ is calculated as $\text{v_{obs} = \frac{\text{k.Q_{x_{obs}}}}}{\text{\rho(x_{free},x_{obs})}}$ for some proportionality constant $k$.
+Similarly, the potential due to destination $x_{dest}$ would be $\text{v_{dest} = \frac{\text{k^\prime.Q_{x_{dest}}}}{\text{\rho(x_{free},x_{dest})}}}$.
+Thus the net potential at a point $x_{free}$ is given by :
 \vspace{3mm}
-$\sum_{i=1}^{n}V_{i}=k\sum_{i=1}^{n}\frac{\text{Q_{i}}}{\text{r_{i}}} + \text{k^\prime}\frac{\text{Q^\prime}}{\text{r^\prime}}$
+$V = v_{dest} + \sum{v_{obs}}=  \frac{\text{k^\prime.Q_{x_{dest}}}}{\text{\rho(x_{free},x_{dest})}} + k\sum_{x_{obs} \epsilon X_{obs}}\frac{\text{Q_{x_{obs}}}}{\text{\rho(x_{free},x_{obs})}} $
 \vspace{3mm}
 
-\hspace{-5mm}Here $k$ and $k^\prime$ is a proportionality constant due to obstacles and destination respectively, and $n$ is the total number of charges. 
+\hspace{-5mm}Here $k$ and $k^\prime$ are proportionality constants due to obstacles and destination respectively. 
 
-Now how much the tree should grow towards the destination relative to growing away from the obstacles, dependant on $k$ and $k^\prime$ is a very sensitive parameter and has serious implications(Fig 2 and Fig 3).
-\vspace{3mm}
+
+The expanse by which the tree should grow towards the destination relative to growing away from the obstacles, dependant on $k$ and $k^\prime$, is a very sensitive parameter and has serious implications on the final path. Extreme potential fields can lead to the tree getting stuck near the obstacles or the tree growing very dense. The images shown in Fig 2 illustrate this fact.
 
 \begin{figure}
 \begin{center}
-\includegraphics[scale=1.1]{merge_image(1).png}
-    \caption{(a)The obstacle filled image. (b) The ideal path calculated using BFS and Dijkstra. (Section 3.2)} \label{fig1}
+\includegraphics[scale=0.12]{manually.png}
+\includegraphics[scale=0.525]{wrong.png}
+    \caption{ The tree growth and piloted sampling of the nodes in RRT-Star with APF for random values of Potential Function. The figures shows the importance of the tuning paramaters failing which the tree either gets stuck or needs generation of large number of nodes to find a feasible path. } \label{fig1}
 \end{center}
 \end{figure}
 
-\subsection{Ideal Potential Data Genration:}
-To find the ideal constants of potential field , we first divided the field into 20X20 pixel sized grids whose centre is a good approximation for rest of the points in grid while finding the ideal potential functions at every point in the field. We found the ideal path by using BFS and Dijkstra from each of the grid's centre to the final destination. Using this ideal path we found the value of ideal k as follows -
-
-\vspace{4mm}
+\subsection{Ideal Potential Data Generation:}
+To find the ideal constants of potential field , the field is divided into a predefined pixel sized grids whose centre is a good approximation for rest of the points in grid while finding the ideal potential functions at every point in the field. The ideal path is found by using Dijkstra's Shortest Path Algorithm from each of the grid's centre to the final destination. Using this ideal path the value of ideal k is found as follows -
 
 Let the magnitude of net repulsive field be $k\sum_{i=1}^{n}\frac{\text{Q_{i}}}{\text{r_{i}}}$ and the magnitude of attractive field be $\frac{\text{Q^\prime}}{\text{r^\prime}}$
 
 Let the angle between repulsive field vector and the ideal vector obtained from the ideal path be $\theta$ and let the angle between attractive field and the ideal vector be $\alpha$.
 \begin{figure}
 \begin{center}
-\includegraphics[scale=1.1]{Drawing(1).png} 
+\includegraphics[scale=0.5]{Drawing(1).png} 
     \caption{Vector representation of fields} \label{fig1}
 \end{center}
 \end{figure}
-\vspace{4mm}
 
 $k\sum_{i=1}^{n}\frac{\text{Q_{i}}}{\text{r_{i}}}{sin{\theta}}  =  \frac{\text{Q^\prime}}{\text{r^\prime}}{sin{\alpha}}$
+
+$k = \frac{\frac{\text{Q^\prime}}{\text{r^\prime}}{sin{\alpha}}}{\sum_{i=1}^{n}\frac{\text{Q_{i}}}{\text{r_{i}}}{sin{\theta}}}$
 
 \vspace{4mm}
 
 
 From this expression k can be evaluated.
 
-\vspace{4mm}
+\vspace{2mm}
 
-An example is shown in the figure below (Fig 3).
- \vspace{5mm}
+An example is shown in the Fig 3.
 
-\subsection{Training:}
-The position of the obstacle is an important determinant of the RRT* Tree. So is the area of the obstacle along with positions of the source and the destinations. So we took the centres of the each obstacle blob, the area of the obstacles and the source and destination coordinates as the features of our neural network. We also fed the ideal potential functions which we acquired using the procedure explained in section 3.2, into the neural network. We used three hidden layers and used k-fold cross validation to tune the hyper-parameters. We also used Adam's optimiser. We then used the potential function thus predicted by the neural network to run an RRT* APF tree and an example is shown in Fig. 3.
-\vspace{10mm}
+\subsection{Training :}
+The position of the obstacle is an important determinant of the RRT* Tree. So is the area of the obstacle along with positions of the source and the destinations. So the centres of the each obstacle blob, the area of the obstacles and the source and destination coordinates were taken as the features of our neural network. The ideal potential functions were also fed to the neural network, which we acquired using the procedure explained in section 3.2, into the neural network. Three hidden layers were used as shown in the Fig. 4. 5-folwhose centred cross validation was used to tune the hyper-parameters. SGD optimiser was used with nesterov momentum. Clipnorm and l2 regularisation was used to control the weights in the neural network.
+The potential function thus predicted by the neural network was fed to run a potential guided RRT* tree and an example of the output tree is shown in Fig. 5.
 \begin{figure}
 \begin{center}
-\includegraphics[scale=1.5]{img_bam.png}
-    \caption{ The tree growth and piloted sampling of the nodes in RRT-Star with APF for the trained value of Potential Function. The tree converges directly to the destination and provides a very good approximation of the shortest path.} \label{fig1}
+\includegraphics[scale=0.20]{nnk.png}
+    \caption{Neural Network neuron diagram} \label{fig1}
+\end{center}
+\end{figure}
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.50]{rsz_pap.jpg}
+    \caption{ The image on the right shows the path predicted by our algorithm($DL\_P\_RRT^*-APF$) and the image on the left shows the path predicted by RRT-Connect. } \label{fig1}
 \end{center}
 \end{figure}
 
-\section{\centering{Results and Improvements:}}
-\subsection{Time of convergence:}
-The RRT* tree with the predicted values of potential functions converged faster than normal RRT* tree. For non ideal potential values, normal RRT* tree would get stuck at local minima which was being avoided by the predicted values.
 
-The following table show the comparison between RRT* tree and the RRT* APF tree with predicted potential functions, wrt. to the time of covergence.
 
-\vspace{10mm}
+\section{{Results and Comparison:}}
+
+\subsection{Density of the tree:}
+The width of the tree also reduces significantly implying that the predicted values of potential functions are close to the ideal ones. The table below shows the comparison between RRT connect and DL RRT* APF with respect to the width of the tree. In each of the images the destination point is the centre of left edge.
+
+\begin{figure}
 \begin{center}
-\begin{tabular}{ |p{1cm}||p{3cm}|p{3cm}|  }
+\includegraphics[scale=0.45]{co(1).png}
+\label{fig1}
+\end{center}
+\end{figure}
+
+\subsection{Time of convergence:}
+The RRT* tree with the predicted values of potential functions converges faster than normal RRT* tree. For non ideal potential values, normal RRT*-APF tree will get stuck at local minimum which is being avoided by using the predicted values.
+
+The following table show the comparison between RRT* tree and the Deep Learning rooted Potential piloted RRT* (DL-P-RRT*) tree with predicted potential functions, wrt. to the time of convergence, for the images given above respectively. 
+
+\vspace{2.5mm}
+\begin{center}
+\begin{tabular}{ |p{1cm}||p{2.5cm}|p{2.5cm}|  }
  \hline
  \multicolumn{3}{|c|}{Time of Convergence} \\
  \hline
- S.No. & RRT* &DL RRT* APF\\
+ S.No. & RRT* &DL-P-RRT*\\
  \hline
- 1   & 3.58    &5.47\\
- 2&   4.56  & 5.81   \\
- 3 &4.28 & 6.31\\
- 4    &5.96 & 6.42\\
- 5&   3.42 & 5.92 \\
+ 1  &2.329800 &0.986253 \\
+ 2  &1.998531 &0.81104  \\
+ 3  &5.170486 &0.978344\\
+ 4  &2.336515 &0.910896\\
+ 5  &1.288411 &0.238291\\
+
+ \hline
+\end{tabular}
+\end{center}
+
+\subsection{Length of path:}
+
+The following table show the comparison between RRT* tree and the Deep Learning rooted Potential piloted RRT* (DL-P-RRT*) tree with predicted potential functions, wrt. to the length of the final path, for the images given above respectively. 
+
+\vspace{2.5mm}
+\begin{center}
+\begin{tabular}{ |p{1cm}||p{2.5cm}|p{2.5cm}|  }
+ \hline
+ \multicolumn{3}{|c|}{Length of the final path} \\
+ \hline
+ S.No. & RRT* &DL-P-RRT*\\
+ \hline
+ 1  &2733.29 &2267.12\\
+ 2  &2539.58 &2597.48\\
+ 3  &2971.05 &2256.47\\
+ 4  &2662.99 & 2597.83\\
+ 5  &2679.56 &2125.55\\
 
  \hline
 \end{tabular}
@@ -272,158 +347,10 @@ The following table show the comparison between RRT* tree and the RRT* APF tree 
 
 
 
-\begin{figure}
-\begin{center}
-\includegraphics[scale=0.65]{stuckyy.png}
-    \caption{ An illustration of a case where the tree gets stuck in a local minimum, due to highly unsuitable value of Potential Function, which is avoided using learning techniques}\label{fig1}
-\end{center}
-\end{figure}
-
-\subsection{Width of the tree:}
-The width of the tree also reduced significantly implying that the predicted values of potential functions were close to the ideal ones. The images below show the comparison between RRT* and DL RRT* APF with respect to the width of the tree.
-
-\begin{figure}
-\begin{center}
-\includegraphics[scale=1.5]{tree.png}
-    \caption{ The tree growth of RRT-Star with APF for a non-ideal value of Potential Function. It is evident that repulsion from the obstacle is not significant enough and that there is unnecessary branching of the tree. The final path is not a good approximation of the shortest path.(Fig 4)} \label{fig1}
-\end{center}
-\end{figure}
-% \begin{figure}
-% We conducted an experiment based on tree generation time given a set of obstacles. The experimental setup included ROS based communication nodes and a GUI based interactive platform for setting up the environment. This was performed on Linux 4.4.0-127-generic with 8 GiB memory and 2.3 GHz x 8 CPU.
-% % \vspace{-1mm}
-% \begin{table}[]
-% \centering
-% \caption{Comparison of time (in milli seconds) in generation of path}
-% \label{Comparison with other planners}
-% \begin{tabular}{@{}c|@{\hskip 0.1in}cccl@{}}
-% \toprule
-% \multirow{\textbf{Obstacles}} & \multicolumn{4}{c}{\textbf{Average Traversal Time}}              
-% \\
-%  & \textbf{PGD-RRT*} & \textbf{RRT*} & \textbf{RT-RRT*} & \textbf{Our planner} \\
-%  \hline
-% 5 & 4.1996  &  3.7078  &  3.7951  & 2.7958\\
-% 7 & 4.2315  &  3.7912  &  3.8105  & 2.8110\\
-% 9 & 4.2555  &  3.9105  &  3.8492  & 2.8862\\
-% 10 & 4.2658 &  3.9824  &  3.8908  & 2.8873\\
-% 12 & 4.3655 &  4.1473  &  4.1335  & 3.1080\\
-% 15 & 4.4662 &  4.2194  &  4.3264  & 3.1866\\
-% 18 & 4.6905 &  4.4505  &  4.5155  & 3.4242\\
-% 20 & 4.9696 &  4.9191  &  4.9583  & 3.9823\\ 
-% \end{tabular}
-% \vspace{-6mm}
-% \end{table}
-% Thus, it can be seen that our planner takes nearly the same time to generate the tree given similar set of environmental conditions. Along with that, our planner provides a more optimised path. The average number of iterations required to find the path to each goal was 10.36 for our method and 18.43 for RT-RRT*.\\
-% \vspace{-6mm}
-% \subsubsection{Replanning}
-% In a dynamic environment, the replanning of path is an important aspect. Moving obstacles when come along the path, a new path has to be found incorporating the new position of the obstacles. For better performance of agents, this replanning of path should take place in less amount of time. Our proposed path planner outperforms other planners in this, hence making it suitable for a real-time dynamic environment. With respect to the PGD-RRT*, our path planner is very quick in replanning as the tree growth does not take place again and again, but gets rewired when required. With respect to the RT-RRT*, our planner provides a more optimised path, which is clear from the illustration provided (fig 3) and Table 1. Our planner is based on a dynamic environment only and can be outperformed by other planners in a static environment.
-
-% \begin{table}[]
-% \centering
-% \caption{Comparison of time (in milli seconds) in replanning of path}
-% \label{Comparison of time in replanning of path}
-% \begin{tabular}{@{}c|@{\hskip 0.1in}cccl@{}}
-% \toprule
-% \multirow{\textbf{Obstacles}} & \multicolumn{4}{c}{\textbf{Average Replanning Time}}              \\
-%  & \textbf{PGD-RRT*} & \textbf{RRT*} & \textbf{RT-RRT*} & \textbf{Our planner} \\ 
-% \hline
-% 5 & 8.1996  &  8.7078  &  3.7958  & 3.7951\\  
-% 7 & 8.2758  &  8.8213  &  3.8501  & 3.8491\\  
-% 10 & 8.2783  &  8.8582  &  3.8614  & 3.8519\\  
-% 11 & 8.2811  &  8.8607  &  3.8688  & 3.8564\\  
-% 15 & 8.2902  &  8.9078  &  3.8891  & 3.8888\\  
-% 18 & 8.3215  &  8.9303  &  3.9011  & 3.8997\\  
-% 21 & 8.3414  &  8.9489  &  3.9114  & 3.9114\\  
-% \end{tabular}
-% \end{table}
-% \\
-% \vspace{-6mm}
-% Our planner takes lesser tree generation time compared to the RT-RRT*, as it is biased in an intelligent way to reach the destination faster, using the concept of potential fields. Moreover, our planner features faster replanning as compared to PGD-RRT* as the tree growth does not take place again and again and is rewired. A similar advantage is seen over RRT* as well. The path generated is more optimised as compared to the RT-RRT* due to intelligent rewiring, which is evident from Table 1.
-% \vspace{-2mm}
-% \section{Conclusion}
-% Our work focuses on a path planner with concepts from a variant of rapidly exploring random trees and artificial potential fields. They are merged innovatively, with concepts from various other domains, and a cost function redefined to suit a dynamic environment. This remains efficient in time with respect to tree growth and requires a lesser number of iterations for path generation, compared to that of similar planners.\\
-% \vspace{-2mm}
-% \subsection*{Future Work}
-% In the future, we propose to research on how the acceleration of a robot can help in computing a more optimal path. Though the mathematics proposed in this paper can easily be extended to take acceleration into consideration, acceleration is not that easy to measure and a lot of noise comes in the way of the location data of the robots being received. Hence, our research aims to find an efficient solution to denoising the data post which we can take into consideration the acceleration, and if possible, other forms of kinetics.\\
-% \\
 \subsection*{Acknowledgement}
-We sincerely thank Rajat Kumar Jenamani (rkj@iitkgp.ac.in), Ashish Kumar Gaurav (ashishkg0022@iitkgp.ac.in) for assisting us in this project and supporting us as and when required.
-% \paragraph{Sample Heading (Fourth Level)}
-% The contribution should contain no more than four levels of
-% headings. Table~\ref{tab1} gives a summary of all heading levels.
-% The 
-% \begin{table}
-% \caption{Table captions should be placed above the
-% tables.}\label{tab1}
-% \begin{tabular}{|l|l|l|}
-% \hline
-% Heading level &  Example & Font size and style\\
-% \hline
-% Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
-% 1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
-% 2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
-% 3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
-% 4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
-% \hline
-% \end{tabular}
-% \end{table}
-
-
-% \noindent Displayed equations are centered and set on a separate
-% line.
-% \begin{equation}
-% x + y = z
-% \end{equation}
-% Please try to avoid rasterized images for line-art diagrams and
-% schemas. Whenever possible, use vector graphics instead (see
-% Fig.~\ref{fig1}).
-
-% \begin{figure}
-% \includegraphics[width=\textwidth]{fig1.eps}
-% \caption{A figure caption is always placed below the illustration.
-% Please note that short captions are centered, while long ones are
-% justified by the macro package automatically.} \label{fig1}
-% \end{figure}
-
-% \begin{theorem}
-% This is a sample theorem. The run-in heading is set in bold, while
-% the following text appears in italics. Definitions, lemmas,
-% propositions, and corollaries are styled the same way.
-% \end{theorem}
-%
-% the environments 'definition', 'lemma', 'proposition', 'corollary',
-% 'remark', and 'example' are defined in the LLNCS documentclass as well.
-%
-% \begin{proof}
-% Proofs, examples, and remarks have the initial word in italics,
-% while the following text appears in normal font.
-% \end{proof}
-% For citations of references, we prefer the use of square brackets
-% and consecutive numbers. Citations using labels or the author/year
-% convention are also acceptable. The following bibliography provides
-% a sample reference list with entries for journal
-% articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
-% book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
+We sincerely thank Ashish Kumar Gaurav (ashishkg0022@iitkgp.ac.in) and Rahul Kumar Vernwal (vernwalrahul@iitkgp.ac.in) for assisting us in this project and supporting us as and when required.
 
 \begin{thebibliography}{99}
-% \bibitem{ref_article1}
-% Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
-
-% \bibitem{ref_lncs1}
-% Author, F., Author, S.: Title of a proceedings paper. In: Editor,
-% F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol. 9999, pp. 1--13.
-% Springer, Heidelberg (2016). \doi{10.10007/1234567890}
-
-% \bibitem{ref_book1}
-% Author, F., Author, S., Author, T.: Book title. 2nd edn. Publisher,
-% Location (1999)
-
-% \bibitem{ref_proc1}
-% Author, A.-B.: Contribution title. In: 9th International Proceedings
-% on Proceedings, pp. 1--2. Publisher, Location (2010)
-
-% \bibitem{ref_url1}
-% LNCS Homepage, \url{http://www.springer.com/lncs}. Last accessed 4
-% Oct 2017
 \bibitem{RT-RRT*}
 Naderi, K., Rajamäki, J, Hämäläinen, P.:RT-RRT*: a real-time path planning algorithm based on RRT*. (2015)
 \bibitem{tdp}
